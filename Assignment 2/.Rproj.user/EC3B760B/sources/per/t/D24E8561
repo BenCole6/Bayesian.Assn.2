@@ -1,0 +1,22 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1538097633352.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "2808950614",
+    "id" : "D24E8561",
+    "lastKnownWriteTime" : 1538138860,
+    "last_content_update" : 1538138860039,
+    "path" : "~/GitHub/Bayesian.Assn.2/Assignment 2/Assignment_2.Rmd",
+    "project_path" : "Assignment_2.Rmd",
+    "properties" : {
+        "cursorPosition" : "286,58",
+        "scrollLine" : "0"
+    },
+    "relative_order" : 2,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_markdown"
+}

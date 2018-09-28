@@ -8,9 +8,9 @@ source("DBDA2E-utilities.R")
 #===============================================================================
 
 genMCMC = function( data , xName="x" , yName="y" , 
-                    numSavedSteps=numSavedSteps , thinSteps=thinSteps , saveName=NULL  ,
+                    numSavedSteps=10000 , thinSteps=1 , saveName=NULL  ,
                     runjagsMethod=runjagsMethodDefault , 
-                    nChains=4) { 
+                    nChains=nChainsDefault , xPred = xPred) { 
   require(runjags)
   #-----------------------------------------------------------------------------
   # THE DATA.
@@ -28,7 +28,8 @@ genMCMC = function( data , xName="x" , yName="y" ,
     x = x ,
     y = y ,
     Nx = dim(x)[2] ,
-    Ntotal = dim(x)[1]
+    Ntotal = dim(x)[1] ,
+    xPred = xPred # Data for predictions
   )
   #-----------------------------------------------------------------------------
   # THE MODEL.
@@ -47,24 +48,32 @@ genMCMC = function( data , xName="x" , yName="y" ,
         zx[i,j] <- ( x[i,j] - xm[j] ) / xsd[j]
       }
     }
+    # # Specify the values of indepdenent variable for prediction
+    # xPred[1] <- 15
+    # xPred[2] <- 75
 
     # Specify the priors for original beta parameters
     # Prior locations to reflect the expert information
     mu0 <- ym # Set to overall mean a priori based on the interpretation of constant term in regression
-    mu[1] <- 90 # Area
-    mu[2] <- 100000 # Bedrooms
-    mu[3] <- 609360.2 # Bathrooms, muY
-    mu[4] <- 120000 # CarParks
-    mu[5] <- 150000 # PropertyType
+    mu[1] <- 0.1 # Cement
+    mu[2] <- 0.15 # Blast Furnace Slag
+    mu[3] <- 0.1 # FLy Ash
+    mu[4] <- -0.5 # Water here this -0.5 is arbitrarirly chosen but the negative sign is due to
+                  # the expert thinks that a unit increase in water decreases the CSS.
+    mu[5] <- 0.1 # Superplasticizer
+    mu[6] <- 0 # Coarse Aggregate
+    mu[7] <- 0 # Fine Aggregate
 
     # Prior variances to reflect the expert information    
-    Var0   <- (ysd^2)
-    Var[1] <- ((ysd^2)*0.0001) # Area
-    Var[2] <- ((ysd^2)*0.05) # Bedrooms
-    Var[3] <- ((ysd^2)*5) # Bathrooms
-    Var[4] <- ((ysd^2)*0.001) # CarParks
-    Var[5] <- ((ysd^2)*0.0001) # PropertyType
-
+    Var0 <- 1 # Set simply to 1
+    Var[1] <- 0.01 # Cement
+    Var[2] <- 0.1 # Blast Furnace Slag
+    Var[3] <- 0.5 # FLy Ash
+    Var[4] <- 50 # Water
+    Var[5] <- 0.1 # Superplasticizer
+    Var[6] <- 0.5 # Coarse Aggregate
+    Var[7] <- 0.5 # Fine Aggregate
+    
     # Compute corresponding prior means and variances for the standardised parameters
     muZ[1:Nx] <-  mu[1:Nx] * xsd[1:Nx] / ysd 
 
@@ -72,7 +81,7 @@ genMCMC = function( data , xName="x" , yName="y" ,
 
     # Compute corresponding prior variances and variances for the standardised parameters
     VarZ[1:Nx] <- Var[1:Nx] * ( xsd[1:Nx]/ ysd )^2
-    VarZ0 <- ((Var0)*100000) / (ysd^2)
+    VarZ0 <- Var0 / (ysd^2)
 
   }
   # Specify the model for standardized data:
@@ -84,9 +93,9 @@ genMCMC = function( data , xName="x" , yName="y" ,
     # Priors vague on standardized scale:
     zbeta0 ~ dnorm( muZ0 , 1/VarZ0 )  
     for ( j in 1:Nx ) {
-      zbeta[j] ~ dnorm( muZ[j] , 0.001/VarZ[j] )
+      zbeta[j] ~ dnorm( muZ[j] , 1/VarZ[j] )
     }
-    zsigma ~ dgamma(0.001,0.001) #dunif( 1.0E-5 , 1.0E+1 )
+    zsigma ~ dgamma(0.01,0.01)#dunif( 1.0E-5 , 1.0E+1 )
     nu ~ dexp(1/30.0)
 
     # Transform to original scale:
@@ -95,8 +104,8 @@ genMCMC = function( data , xName="x" , yName="y" ,
     sigma <- zsigma*ysd
 
     # Compute predictions at every step of the MCMC
-    # pred <- beta0 + beta[1] * xPred[1] + beta[2] * xPred[2] + beta[3] * xPred[3] + beta[4] * xPred[4] 
-    #         + beta[5] * xPred[5] + beta[6] * xPred[6] + beta[7] * xPred[7] 
+    pred <- beta0 + beta[1] * xPred[1] + beta[2] * xPred[2] + beta[3] * xPred[3] + beta[4] * xPred[4] 
+            + beta[5] * xPred[5] + beta[6] * xPred[6] + beta[7] * xPred[7] 
 
   }
   " # close quote for modelString
@@ -119,10 +128,10 @@ genMCMC = function( data , xName="x" , yName="y" ,
   #-----------------------------------------------------------------------------
   # RUN THE CHAINS
   parameters = c( "beta0" ,  "beta" ,  "sigma", 
-                  "zbeta0" , "zbeta" , "zsigma", "nu")
-  adaptSteps = 1000  # Number of steps to "tune" the samplers
-  burnInSteps = 500
-  runJagsOut <- run.jags( method="parallel",
+                  "zbeta0" , "zbeta" , "zsigma", "nu" , "pred" )
+  adaptSteps = 500  # Number of steps to "tune" the samplers
+  burnInSteps = 1000
+  runJagsOut <- run.jags( method=runjagsMethod ,
                           model="TEMPmodel.txt" , 
                           monitor=parameters , 
                           data=dataList ,  
@@ -135,7 +144,21 @@ genMCMC = function( data , xName="x" , yName="y" ,
                           summarise=FALSE ,
                           plots=FALSE )
   codaSamples = as.mcmc.list( runJagsOut )
-
+  # resulting codaSamples object has these indices: 
+  #   codaSamples[[ chainIdx ]][ stepIdx , paramIdx ]
+  # Added by Demirhan
+  # if ( !any(is.null(xPred)) ) {
+  #   for ( i in 1:nChains){
+  #     pred = codaSamples[[i]][,"beta0"]
+  #     for ( pName in colnames(xPred) ) {
+  #       pred = pred + codaSamples[[i]][,pName]*as.numeric(xPred[pName])
+  #     }
+  #     codaSamples[[i]]  =cbind(codaSamples[[i]] , as.data.frame(as.matrix(pred)) )
+  #   }
+  #   codaSamples = as.mcmc.list( codaSamples )
+  #   
+  # }
+  
   if ( !is.null(saveName) ) {
     save( codaSamples , file=paste(saveName,"Mcmc.Rdata",sep="") )
   }
@@ -186,7 +209,7 @@ plotMCMC = function( codaSamples , data , xName="x" , yName="y" ,
   sigma = mcmcMat[,"sigma"]
   nu = mcmcMat[,"nu"]
   log10nu = log10(nu)
-  # pred = mcmcMat[,"pred"] # Added by Demirhan
+  pred = mcmcMat[,"pred"] # Added by Demirhan
   #-----------------------------------------------------------------------------
   # Compute R^2 for credible parameters:
   YcorX = cor( y , x ) # correlation of y with each x predictor
@@ -267,8 +290,8 @@ plotMCMC = function( codaSamples , data , xName="x" , yName="y" ,
   histInfo = plotPost( Rsq , cex.lab = 1.75 , showCurve=showCurve ,
                        xlab=bquote(R^2) , main=paste("Prop Var Accntd") )
   panelCount = decideOpenGraph( panelCount , finished=TRUE , saveName=paste0(saveName,"PostMarg") )
-  # histInfo = plotPost( pred , cex.lab = 1.75 , showCurve=showCurve ,
-  #                      xlab=bquote(pred) , main="Prediction" ) # Added by Demirhan
+  histInfo = plotPost( pred , cex.lab = 1.75 , showCurve=showCurve ,
+                       xlab=bquote(pred) , main="Prediction" ) # Added by Demirhan
   # Standardized scale:
   panelCount = 1
   panelCount = decideOpenGraph( panelCount , saveName=paste0(saveName,"PostMargZ") )

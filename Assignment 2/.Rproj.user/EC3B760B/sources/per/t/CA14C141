@@ -1,0 +1,22 @@
+{
+    "collab_server" : "",
+    "contents" : "",
+    "created" : 1538097658176.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "3473950188",
+    "id" : "CA14C141",
+    "lastKnownWriteTime" : 1538135770,
+    "last_content_update" : 1538135770576,
+    "path" : "~/GitHub/Bayesian.Assn.2/Assignment 2/Jags-Ymet-XmetMulti-Mrobust-Assn2.R",
+    "project_path" : "Jags-Ymet-XmetMulti-Mrobust-Assn2.R",
+    "properties" : {
+        "cursorPosition" : "86,39",
+        "scrollLine" : "68"
+    },
+    "relative_order" : 3,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

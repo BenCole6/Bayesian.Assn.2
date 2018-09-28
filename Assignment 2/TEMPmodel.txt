@@ -21,15 +21,15 @@
     mu[2] <- 100000 # Bedrooms
     mu[3] <- 609360.2 # Bathrooms, muY
     mu[4] <- 120000 # CarParks
-    mu[5] <- 0.5 # PropertyType
+    mu[5] <- 150000 # PropertyType
 
     # Prior variances to reflect the expert information    
-    Var0 <- ((ysd^2)*40000)
-    Var[1] <- ((ysd^2)*0.01) # Area
-    Var[2] <- ((ysd^2)*0.75) # Bedrooms
-    Var[3] <- ((ysd^2)*100) # Bathrooms
-    Var[4] <- ((ysd^2)*0.1) # CarParks
-    Var[5] <- ((ysd^2)*0.01)
+    Var0   <- (ysd^2)
+    Var[1] <- ((ysd^2)*0.0001) # Area
+    Var[2] <- ((ysd^2)*0.05) # Bedrooms
+    Var[3] <- ((ysd^2)*5) # Bathrooms
+    Var[4] <- ((ysd^2)*0.001) # CarParks
+    Var[5] <- ((ysd^2)*0.0001) # PropertyType
 
     # Compute corresponding prior means and variances for the standardised parameters
     muZ[1:Nx] <-  mu[1:Nx] * xsd[1:Nx] / ysd 
@@ -38,7 +38,7 @@
 
     # Compute corresponding prior variances and variances for the standardised parameters
     VarZ[1:Nx] <- Var[1:Nx] * ( xsd[1:Nx]/ ysd )^2
-    VarZ0 <- Var0 / (ysd^2)
+    VarZ0 <- ((Var0)*100000) / (ysd^2)
 
   }
   # Specify the model for standardized data:
@@ -50,9 +50,9 @@
     # Priors vague on standardized scale:
     zbeta0 ~ dnorm( muZ0 , 1/VarZ0 )  
     for ( j in 1:Nx ) {
-      zbeta[j] ~ dnorm( muZ[j] , 1/VarZ[j] )
+      zbeta[j] ~ dnorm( muZ[j] , 0.001/VarZ[j] )
     }
-    zsigma ~ dgamma(0.01,0.01)#dunif( 1.0E-5 , 1.0E+1 )
+    zsigma ~ dgamma(0.001,0.001) #dunif( 1.0E-5 , 1.0E+1 )
     nu ~ dexp(1/30.0)
 
     # Transform to original scale:

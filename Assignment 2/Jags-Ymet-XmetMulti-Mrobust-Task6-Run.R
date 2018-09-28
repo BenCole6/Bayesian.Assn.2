@@ -2,26 +2,29 @@
 #------------------------------------------------------------------------------- 
 # Optional generic preliminaries:
 graphics.off() # This closes all of R's graphics windows.
+rm(list=ls())  # Careful! This clears all of R's memory!
+setwd("~/Documents/MATH2269_Bayesian/tasks/Module6")
 
-myData <- read.csv("Assignment2PropertyPrices.csv")
-yName <- "SalePrice"
-xName <- c("Area",	"Bedrooms",	"Bathrooms", 	"CarParks",  	"PropertyType")
-fileNameRoot <- "Assn2"
-numSavedSteps <- 2500 ;
-thinSteps <- 4
+myData = read.csv("~/Documents/MATH2269_Bayesian/tasks/Module6/concrete.csv")
+yName = "CCS" ; xName = c("Cement",	"Blast.Furnace.Slag",	"Fly.Ash", 	"Water",  	"Superplasticizer", 	"Coarse.Aggregate", 	"Fine.Aggregate" )
+fileNameRoot = "Task6"
+numSavedSteps = 5000 ; thinSteps=2
 
 graphFileType = "eps" 
 #------------------------------------------------------------------------------- 
 # Load the relevant model into R's working memory:
-source("Jags-Ymet-XmetMulti-Mrobust-Assn2.R")
+source("Jags-Ymet-XmetMulti-Mrobust-Task6.R")
 #------------------------------------------------------------------------------- 
 # Generate the MCMC chain:
-
-mcmcCoda = genMCMC( data=myData , xName=xName , yName=yName, 
-                    numSavedSteps = numSavedSteps , thinSteps=thinSteps ,
-                    saveName=fileNameRoot)
-
-
+#startTime = proc.time()
+xPred = c(168 ,	42.1 ,	163.8 ,	121.8 ,	5.7 ,	1058.7 ,	780.1  )
+colnames(xPred) = c("beta[1]","beta[2]","beta[3]","beta[4]","beta[5]","beta[6]","beta[7]")
+mcmcCoda = genMCMC( data=myData , xName=xName , yName=yName , 
+                    numSavedSteps=numSavedSteps , thinSteps=thinSteps , 
+                    saveName=fileNameRoot , xPred = xPred )
+#stopTime = proc.time()
+#duration = stopTime - startTime
+#show(duration)
 #------------------------------------------------------------------------------- 
 # Display diagnostics of chain, for specified parameters:
 parameterNames = varnames(mcmcCoda) # get all parameter names
@@ -41,5 +44,3 @@ plotMCMC( mcmcCoda , data=myData , xName=xName , yName=yName ,
           pairsPlot=TRUE , showCurve=FALSE ,
           saveName=fileNameRoot , saveType=graphFileType )
 #------------------------------------------------------------------------------- 
-
-beep(2)
