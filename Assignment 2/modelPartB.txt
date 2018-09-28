@@ -1,0 +1,68 @@
+
+  # Standardize the data:
+  data {
+  ym <- mean(y)
+  ysd <- sd(y)
+  for ( i in 1:Ntotal ) {
+  zy[i] <- ( y[i] - ym ) / ysd
+  }
+  for ( j in 1:Nx ) {
+  xm[j]  <- mean(x[,j])
+  xsd[j] <-   sd(x[,j])
+  for ( i in 1:Ntotal ) {
+  zx[i,j] <- ( x[i,j] - xm[j] ) / xsd[j]
+  }
+  }
+  
+  # Specify the priors for original beta parameters
+  # Prior locations to reflect the expert information
+  mu0 <- ym # Set to overall mean a priori based on the interpretation of constant term in regression
+  mu[1] <- 90 # Area
+  mu[2] <- 100000 # Bedrooms
+  mu[3] <- 609360.2 # Bathrooms, muY
+  mu[4] <- 120000 # CarParks
+  # mu[5] <- 0.5 # PropertyType
+  
+  # Prior variances to reflect the expert information    
+  Var0 <- 1 # Set simply to 1
+  Var[1] <- (ysd^2)*0.01 # Area
+  Var[2] <- (ysd^2)*0.75 # Bedrooms
+  Var[3] <- (ysd^2)*100 # Bathrooms
+  Var[4] <- (ysd^2)*0.1 # CarParks
+  Var[5] <- (ysd^2)*0.1 # PropertyType
+  
+  # Compute corresponding prior means and variances for the standardised parameters
+  muZ[1:nX] <-  mu[1:nX] * xsd[1:nX] / ysd 
+  
+  muZ0 <- (mu0 + sum( mu[1:nX] * xm[1:nX] / xsd[1:nX] )*ysd - ym) / ysd 
+  
+  # Compute corresponding prior variances and variances for the standardised parameters
+  VarZ[1:nX] <- Var[1:nX] * ( xsd[1:nX]/ ysd )^2
+  VarZ0 <- Var0 / (ysd^2)
+  
+}
+# Specify the model for standardized data:
+model {
+for ( i in 1:Ntotal ) {
+zy[i] ~ dt( zbeta0 + sum( zbeta[1:nX] * zx[i,1:nX] ) , 1/zsigma^2 , nu )
+}
+
+# Priors vague on standardized scale:
+zbeta0 ~ dnorm( muZ0 , 1/VarZ0 )  
+for ( j in 1:nX ) {
+zbeta[j] ~ dnorm( muZ[j] , 1/VarZ[j] )
+}
+zsigma ~ dgamma(0.01,0.01)#dunif( 1.0E-5 , 1.0E+1 )
+nu ~ dexp(1/30.0)
+
+# Transform to original scale:
+beta[1:nX] <- ( zbeta[1:nX] / xsd[1:nX] )*ysd
+beta0 <- zbeta0*ysd  + ym - sum( zbeta[1:nX] * xm[1:nX] / xsd[1:nX] )*ysd
+sigma <- zsigma*ysd
+
+# Compute predictions at every step of the MCMC
+pred <- beta0 + beta[1] * xPred[1] + beta[2] * xPred[2] + beta[3] * xPred[3] + beta[4] * xPred[4] 
++ beta[5] * xPred[5] + beta[6] * xPred[6] + beta[7] * xPred[7] 
+
+}
+

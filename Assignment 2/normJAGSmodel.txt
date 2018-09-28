@@ -1,0 +1,12 @@
+
+model {
+  # priors
+  mu ~ dnorm(609360.2, tau)
+  tau ~ dgamma(0.001, 1/(262475685684))
+
+  # likelihood
+  for (i in 1:nTotal) {
+    vectSalePrice[i] ~ dnorm(mu, tau)
+  }
+}
+

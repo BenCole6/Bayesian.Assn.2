@@ -1,0 +1,20 @@
+{
+    "collab_server" : "",
+    "contents" : "# Example for Jags-Ymet-XmetMulti-Mrobust.R \n#------------------------------------------------------------------------------- \n# Optional generic preliminaries:\ngraphics.off() # This closes all of R's graphics windows.\n\nmyData <- read.csv(\"Assignment2PropertyPrices.csv\")\nyName <- \"SalePrice\"\nxName <- c(\"Area\",\t\"Bedrooms\",\t\"Bathrooms\", \t\"CarParks\",  \t\"PropertyType\")\nfileNameRoot <- \"Assn2\"\nnumSavedSteps <- 1000 ;\nthinSteps <- 10\n\ngraphFileType = \"eps\" \n#------------------------------------------------------------------------------- \n# Load the relevant model into R's working memory:\nsource(\"Jags-Ymet-XmetMulti-Mrobust-Assn2.R\")\n#------------------------------------------------------------------------------- \n# Generate the MCMC chain:\n\nmcmcCoda = genMCMC( data=myData , xName=xName , yName=yName, \n                    numSavedSteps = numSavedSteps , thinSteps=thinSteps ,\n                    saveName=fileNameRoot)\n\n\n#------------------------------------------------------------------------------- \n# Display diagnostics of chain, for specified parameters:\nparameterNames = varnames(mcmcCoda) # get all parameter names\nfor ( parName in parameterNames ) {\n  diagMCMC( codaObject=mcmcCoda , parName=parName , \n            saveName=fileNameRoot , saveType=graphFileType )\n}\ngraphics.off()\n#------------------------------------------------------------------------------- \n# Get summary statistics of chain:\n\nsummaryInfo = smryMCMC( mcmcCoda , \n                        saveName=fileNameRoot  )\nshow(summaryInfo)\n# Display posterior information:\nplotMCMC( mcmcCoda , data=myData , xName=xName , yName=yName , \n          pairsPlot=TRUE , showCurve=FALSE ,\n          saveName=fileNameRoot , saveType=graphFileType )\n#------------------------------------------------------------------------------- \n\nbeep(2)",
+    "created" : 1537841734585.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "1764631616",
+    "id" : "1CE696A",
+    "lastKnownWriteTime" : 1537946021,
+    "last_content_update" : 1537946021646,
+    "path" : "~/RMIT/2018 RMIT SEM 2/Applied Bayesian Statistics/Assignment 2/Jags-Ymet-XmetMulti-Mrobust-Assn2-Run.R",
+    "project_path" : "Jags-Ymet-XmetMulti-Mrobust-Assn2-Run.R",
+    "properties" : {
+    },
+    "relative_order" : 3,
+    "source_on_save" : false,
+    "source_window" : "",
+    "type" : "r_source"
+}

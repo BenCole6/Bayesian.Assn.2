@@ -1,0 +1,300 @@
+---
+title: "Applied Bayesian Statistics - Assignment 2"
+author: "Benjamin Cole - s3412349"
+date: "12 September 2018"
+output: html_document
+---
+
+### Data and Packages
+
+```{r, echo=T, message=F, warning=F, results='hide'}
+
+packages <- c("tidyverse",
+              "ggplot2",
+              "rmarkdown",
+              "knitr",
+              "kableExtra",
+              "purrr",
+              "scales",
+              "rjags",
+              "runjags",
+              "coda",
+              "readr",
+              "beepr")
+
+lapply(packages, library, character.only=T)
+
+source("DBDA2E-utilities.R")
+
+# Data
+PropertyPrices <- read_csv("Assignment2PropertyPrices.csv")
+
+PropertyPrices$SalePrice <- as.numeric(PropertyPrices$SalePrice)
+
+```
+
+# **Part A**
+
+### Model Diagram Parameters
+
+```{r, fig.width=10, fig.height=7, warning=F, message=F, echo=T}
+
+PropertyPrices %>% summarise("Mean Sale Price" = mean(SalePrice),
+                             "Sale Price Var" = var(SalePrice),
+                             "Sale Price SD" = sd(SalePrice),
+                             "Min Sale Price" = min(SalePrice),
+                             "Max Sale Price" = max(SalePrice),
+                             "n Observations" = n()) %>% 
+  gather(key="Measure",
+         value="Value") %>% 
+  kable(align="lr", "html",
+        format.args = list(trim=F,
+                           digits=1,
+                           nsmall=1,
+                           scientific=F,
+                           big.mark=" ")) %>% 
+  kable_styling(full_width=F,
+                bootstrap_options=)
+
+# Sale price hist
+ggplot(PropertyPrices, aes(x=SalePrice)) +
+  geom_histogram(aes(fill=factor(PropertyPrices$PropertyType,
+                                    labels=c("House", "Unit"))),
+                 col="white",
+                 bins=40,
+                 alpha=2/3) +
+  scale_x_continuous("Sale Price (AUD)",
+                     labels=dollar) +
+  scale_y_continuous("Number of Properties",
+                     label=comma) + 
+  scale_fill_manual("Property Type",
+                    values=c("blue3", "cyan3")) +
+  ggtitle("Sale Price Histogram") +
+  theme_minimal()
+
+```
+
+`SalePrice` is right-skewed and not normally distributed. However, as \(n=10,000\), CLT can be assumed and that distribution of sampling means would be Gaussian. As such, the Bayesian model diagram is:
+
+![Model Diagram](Model Diagram Part A.png)
+
+### JAGS Data and Model blocks
+
+```{r, warning=F, message=F, echo=T}
+
+vectSalePrice <- PropertyPrices$SalePrice
+nTotal <- length(vectSalePrice)
+
+dataList <- list(
+  vectSalePrice = vectSalePrice,
+  nTotal = nTotal
+)
+
+var(vectSalePrice)
+
+
+modelString <- c("
+model {
+  # priors
+  mu ~ dnorm(609360.2, tau)
+  tau ~ dgamma(0.001, 1/(262475685684))
+
+  # likelihood
+  for (i in 1:nTotal) {
+    vectSalePrice[i] ~ dnorm(mu, tau)
+  }
+}
+"
+)
+
+
+writeLines(modelString, con="normJAGSmodel.txt")
+
+```
+
+### Compile Model and run Markov Chains
+
+
+```{r, warning=F, message=F, echo=T, fig.width=10, fig.height=8}
+
+jagsModel <- jags.model(file="normJAGSmodel.txt",
+                        data=dataList,
+                        n.chains=5,
+                        n.adapt=150
+                        )
+
+update(jagsModel,
+       n.iter=500)
+
+codaSamples <- coda.samples(jagsModel,
+                            variable.names=c("mu"),
+                            n.iter=2500
+                            )
+
+# beep(2)
+
+# Display MCMC diagnostics
+diagMCMC(codaObject=codaSamples,
+         parName="mu")
+
+# Display the posterior distribution of mu
+plotPost(codaSamples[,"mu"],
+          main="mu",
+          xlab=bquote(mu)
+         )
+
+```
+
+### Interpretation
+
+#### Chain Representativeness
+
+The chains all seem to have settled about \(\bar{x}\approx 610,000\). The chains seem to mix well, with most values of each iteration being between \(590,000\) and \(630,000\). After the burn-in period, the chains can be seen in the smoothed density plot to overlap well. The shrink factor can also be observed to be very close to one after the burn-in period. The \(95\%\) High Density Interval is \((598981.1, 618939.5)\), with a mode of \(609 000\).
+
+#### Chain Accuracy
+
+The *Effective Sample Size* is the same length of the chain \((ESS=12500)\) and the *Monte Carlo standard error* is somewhat low compared to \(\bar{x}\approx 610,000\) at \((MCSE\approx46.2)\). Considering the *Effective Sample Size* adn the *Monte Carlo standard error*, it can be suggested that the chains are accurate represenations of the posterior probability distribution.
+
+
+# **Part B**
+
+### Regression Model
+
+The following expert knowledge has been provided for the predictor variables of the data set, which allows for prior distributions to be defined:
+"
+* Area: Every m2 increase in land size increases the sales price by 90 AUD. This is a very strong expert knowledge.
+* Bedrooms: Every additional bedroom increases the sales price by 100,000AUD. This is a weak expert knowledge.
+* Bathrooms: There is no expert knowledge on the number of bathrooms.
+* CarParks: Every additional car space increases the sales price by 120,000AUD. This is a strong expert knowledge.
+* PropertyType: If the property is a unit, the sale price will be 150,000 AUD less than that of a house on the average. This is a very strong expert knowledge.
+"
+
+These prior distributions will be used in the multiple linear regression equation \(\mu=\beta_0+\beta_1X_1+\beta_2X_2+\beta_3X_3+\beta_4X_4+\beta_5X_5\), which can be modelled as:
+
+![Generic Model Diagram](Model Diagram Part B.png)
+
+With the distributions of predictors (denoted \(j\)) defined per predictor as:
+
+1. Area:
+$$\beta_1 = j\sim N\left(\mu=90, \tau=\left(\frac{1}{\sigma_y^2}\right)\times0.01\right)$$
+
+2. Bedrooms:
+$$\beta_2 =j\sim N\left(\mu=100\ 000,\tau=\left(\frac{1}{\sigma_y^2} \right)\times0.75 \right)$$
+
+3. Bathrooms
+$$\beta_3 =j\sim N\left(\mu=609\ 360.2,\tau=\left(\frac{1}{\sigma_y^2}\right) \times100 \right)$$
+```{r, collapse=T}
+# mean of SalePrice
+mean(PropertyPrices$SalePrice) %>% format(big.mark=" ")
+```
+
+4. CarParks:
+$$\beta_4=j\sim N\left(\mu=120\,000,\tau=\left(\frac{1}{\sigma_y^2}\right) \times0.1\right)$$
+
+5. PropertyType:
+$$\beta_5 = j\sim N\left(\mu=150\ 000, \tau=\left(\frac{1}{\sigma_y^2}\right)\times 0.01\right)$$
+
+#### Data and Model Block
+
+```{r}
+
+  modelString = "
+  # Standardize the data:
+  data {
+    ym <- mean(y)
+    ysd <- sd(y)
+    for ( i in 1:Ntotal ) {
+      zy[i] <- ( y[i] - ym ) / ysd
+    }
+    for ( j in 1:Nx ) {
+      xm[j]  <- mean(x[,j])
+      xsd[j] <-   sd(x[,j])
+      for ( i in 1:Ntotal ) {
+        zx[i,j] <- ( x[i,j] - xm[j] ) / xsd[j]
+      }
+    }
+
+    # Prior mus
+    mu0 <- ym # Set to overall mean a priori based on the interpretation of constant term in regression
+    mu[1] <- 90 # Area
+    mu[2] <- 100000 # Bedrooms
+    mu[3] <- 609360.2 # Bathrooms, muY
+    mu[4] <- 120000 # CarParks
+    mu[5] <- 0.5 # PropertyType
+
+    # Prior taus   
+    Var0 <- (1/(ysd^2))
+    Var[1] <- ((ysd^2)*0.01) # Area
+    Var[2] <- ((ysd^2)*0.75) # Bedrooms
+    Var[3] <- ((ysd^2)*100) # Bathrooms
+    Var[4] <- ((ysd^2)*0.1) # CarParks
+    Var[5] <- ((ysd^2)*0.01) # PropertyType
+
+    # Standardising mus
+    muZ[1:Nx] <-  mu[1:Nx] * xsd[1:Nx] / ysd 
+
+    muZ0 <- (mu0 + sum( mu[1:Nx] * xm[1:Nx] / xsd[1:Nx] )*ysd - ym) / ysd 
+
+    # Standardising taus
+    VarZ[1:Nx] <- Var[1:Nx] * ( xsd[1:Nx]/ ysd )^2
+    VarZ0 <- Var0 / (ysd^2)
+
+  }
+  # Specify the model for standardized data:
+  model {
+    for ( i in 1:Ntotal ) {
+      zy[i] ~ dt( zbeta0 + sum( zbeta[1:Nx] * zx[i,1:Nx] ) , 1/zsigma^2 , nu )
+    }
+
+    # Priors vague on standardized scale:
+    zbeta0 ~ dnorm( muZ0 , 1/VarZ0 )  
+    for ( j in 1:Nx ) {
+      zbeta[j] ~ dnorm( muZ[j] , 1/VarZ[j] )
+    }
+    zsigma ~ dgamma(0.01,0.01)#dunif( 1.0E-5 , 1.0E+1 )
+    nu ~ dexp(1/30.0)
+
+    # Transform to original scale:
+    beta[1:Nx] <- ( zbeta[1:Nx] / xsd[1:Nx] )*ysd
+    beta0 <- zbeta0*ysd  + ym - sum( zbeta[1:Nx] * xm[1:Nx] / xsd[1:Nx] )*ysd
+    sigma <- zsigma*ysd
+
+    # Compute predictions at every step of the MCMC
+    # pred <- beta0 + beta[1] * xPred[1] + beta[2] * xPred[2] + beta[3] * xPred[3] + beta[4] * xPred[4] 
+    #         + beta[5] * xPred[5] + beta[6] * xPred[6] + beta[7] * xPred[7] 
+
+  }
+  "
+
+```
+
+
+### Standardising the Data
+
+To reduce the autocorrelation of the regression model parameters, particularly \(\beta_0\) & \(\beta_1\), the data needs to be standardised as follows: 
+
+$$z_{\hat{y}}=\zeta_0 SD_y +M_y -SD_y \left(\sum_{j=1} \zeta_j \frac{M_{x_{j}}}{SD_{x_{j}}} + \sum_j \left(\zeta{_j} \frac{SD_y}{SD_{x_{j}}}\right) \right)$$
+
+The model block above uses this method to standardise the data for \(\beta_0\) and each \(\beta_j\) predictor.
+
+
+```{r}
+
+parameterNames = varnames(mcmcCoda)
+
+for ( parName in parameterNames ) {
+  diagMCMC( codaObject=mcmcCoda , parName=parName , 
+            saveName=fileNameRoot , saveType=graphFileType, 
+            )
+}
+
+```
+
+
+```{r}
+plotMCMC( mcmcCoda , data=myData , xName=xName , yName=yName , 
+          pairsPlot=TRUE , showCurve=TRUE ,
+          saveName=fileNameRoot , saveType=graphFileType )
+
+```
+

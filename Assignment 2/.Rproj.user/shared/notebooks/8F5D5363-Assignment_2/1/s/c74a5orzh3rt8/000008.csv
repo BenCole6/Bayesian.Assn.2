@@ -1,0 +1,65 @@
+"0","PropertyPrices %>% summarise(""Mean Sale Price"" = mean(SalePrice),"
+"0","                             ""Sale Price Var"" = var(SalePrice),"
+"0","                             ""Sale Price SD"" = sd(SalePrice),"
+"0","                             ""Min Sale Price"" = min(SalePrice),"
+"0","                             ""Max Sale Price"" = max(SalePrice),"
+"0","                             ""n Observations"" = n()) %>% "
+"0","  gather(key=""Measure"","
+"0","         value=""Value"") %>% "
+"0","  kable(align=""lr"", ""html"","
+"0","        format.args = list(trim=F,"
+"0","                           digits=1,"
+"0","                           nsmall=1,"
+"0","                           scientific=F,"
+"0","                           big.mark="" "")) %>% "
+"0","  kable_styling(full_width=F,"
+"0","                bootstrap_options=)"
+"1","<table class=""table"" style=""width: auto !important; margin-left: auto; margin-right: auto;"">
+ <thead>
+  <tr>
+   <th style=""text-align:left;""> Measure </th>
+   <th style=""text-align:right;""> Value </th>
+  </tr>
+ </thead>
+<tbody>
+  <tr>
+   <td style=""text-align:left;""> Mean Sale Price </td>
+   <td style=""text-align:right;""> 609 360.2 </td>
+  </tr>
+  <tr>
+   <td style=""text-align:left;""> Sale Price Var </td>
+   <td style=""text-align:right;""> 262 475 685 684.1 </td>
+  </tr>
+  <tr>
+   <td style=""text-align:left;""> Sale Price SD </td>
+   <td style=""text-align:right;""> 512 323.8 </td>
+  </tr>
+  <tr>
+   <td style=""text-align:left;""> Min Sale Price </td>
+   <td style=""text-align:right;""> 200 000.0 </td>
+  </tr>
+  <tr>
+   <td style=""text-align:left;""> Max Sale Price </td>
+   <td style=""text-align:right;""> 7 000 000.0 </td>
+  </tr>
+  <tr>
+   <td style=""text-align:left;""> n Observations </td>
+   <td style=""text-align:right;""> 10 000.0 </td>
+  </tr>
+</tbody>
+</table>"
+"0","# Sale price hist"
+"0","ggplot(PropertyPrices, aes(x=SalePrice)) +"
+"0","  geom_histogram(aes(fill=factor(PropertyPrices$PropertyType,"
+"0","                                    labels=c(""House"", ""Unit""))),"
+"0","                 col=""white"","
+"0","                 bins=40,"
+"0","                 alpha=2/3) +"
+"0","  scale_x_continuous(""Sale Price (AUD)"","
+"0","                     labels=dollar) +"
+"0","  scale_y_continuous(""Number of Properties"","
+"0","                     label=comma) + "
+"0","  scale_fill_manual(""Property Type"","
+"0","                    values=c(""blue3"", ""cyan3"")) +"
+"0","  ggtitle(""Sale Price Histogram"") +"
+"0","  theme_minimal()"

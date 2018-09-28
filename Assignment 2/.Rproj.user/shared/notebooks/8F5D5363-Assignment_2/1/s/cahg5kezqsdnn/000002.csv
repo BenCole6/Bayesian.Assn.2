@@ -1,0 +1,5 @@
+"0","diagMCMC(codaObject=codaSamples,
+         parName=""mu"")
+"
+"2","Error in mcmc.list(x) : object 'codaSamples' not found
+"
