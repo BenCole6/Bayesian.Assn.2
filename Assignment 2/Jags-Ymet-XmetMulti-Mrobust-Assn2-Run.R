@@ -8,7 +8,7 @@ yName <- "SalePrice"
 xName <- c("Area",	"Bedrooms",	"Bathrooms", 	"CarParks",  	"PropertyType")
 fileNameRoot <- "Assn2"
 numSavedSteps <- 10000;
-thinSteps <- 5
+thinSteps <- 3
 
 graphFileType = "eps" 
 #------------------------------------------------------------------------------- 

@@ -5,15 +5,15 @@
     "dirty" : false,
     "encoding" : "UTF-8",
     "folds" : "",
-    "hash" : "1334937957",
+    "hash" : "0",
     "id" : "CA14C141",
-    "lastKnownWriteTime" : 1538300960,
-    "last_content_update" : 1538300960252,
+    "lastKnownWriteTime" : 1538306378,
+    "last_content_update" : 1538306378397,
     "path" : "~/GitHub/Bayesian.Assn.2/Assignment 2/Jags-Ymet-XmetMulti-Mrobust-Assn2.R",
     "project_path" : "Jags-Ymet-XmetMulti-Mrobust-Assn2.R",
     "properties" : {
-        "cursorPosition" : "67,20",
-        "scrollLine" : "56"
+        "cursorPosition" : "45,18",
+        "scrollLine" : "30"
     },
     "relative_order" : 3,
     "source_on_save" : false,

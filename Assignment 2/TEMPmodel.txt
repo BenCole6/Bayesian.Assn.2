@@ -35,7 +35,7 @@
     # Compute corresponding prior means and variances for the standardised parameters
     muZ[1:Nx] <-  mu[1:Nx] * xsd[1:Nx] / ysd
 
-    muZ0 <- (mu0 + sum( mu[1:Nx] * xm[1:Nx] / xsd[1:Nx] )*ysd - ym) / ysd 
+    muZ0 <- (mu0 + sum( mu[1:Nx] * xm[1:Nx] / xsd[1:Nx] )*ysd - ym) / ysd^2 
 
     # Compute corresponding prior variances and variances for the standardised parameters
     VarZ[1:Nx] <- Var[1:Nx] * ( xsd[1:Nx]/ ysd )^2
