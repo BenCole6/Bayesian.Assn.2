@@ -7,8 +7,8 @@ myData <- read.csv("Assignment2PropertyPrices.csv")
 yName <- "SalePrice"
 xName <- c("Area",	"Bedrooms",	"Bathrooms", 	"CarParks",  	"PropertyType")
 fileNameRoot <- "Assn2"
-numSavedSteps <- 2500 ;
-thinSteps <- 4
+numSavedSteps <- 10000;
+thinSteps <- 3
 
 graphFileType = "eps" 
 #------------------------------------------------------------------------------- 
@@ -16,10 +16,16 @@ graphFileType = "eps"
 source("Jags-Ymet-XmetMulti-Mrobust-Assn2.R")
 #------------------------------------------------------------------------------- 
 # Generate the MCMC chain:
+Pred1 <- c(600,2,2,1,1)
+Pred2 <- c(800,3,1,2,0)
+Pred3 <- c(1500,2,1,1,0)
+Pred4 <- c(2500,5,4,4,0)
+Pred5 <- c(250,3,2,1,1)
 
 mcmcCoda = genMCMC( data=myData , xName=xName , yName=yName, 
                     numSavedSteps = numSavedSteps , thinSteps=thinSteps ,
-                    saveName=fileNameRoot)
+                    saveName=fileNameRoot,
+                    Pred1=Pred1, Pred2=Pred2, Pred3=Pred3, Pred4=Pred4, Pred5=Pred5)
 
 
 #------------------------------------------------------------------------------- 
@@ -38,8 +44,8 @@ summaryInfo = smryMCMC( mcmcCoda ,
 show(summaryInfo)
 # Display posterior information:
 plotMCMC( mcmcCoda , data=myData , xName=xName , yName=yName , 
-          pairsPlot=TRUE , showCurve=FALSE ,
+          pairsPlot=TRUE , showCurve=TRUE ,
           saveName=fileNameRoot , saveType=graphFileType )
 #------------------------------------------------------------------------------- 
 
-beep(2)
+beep(8)

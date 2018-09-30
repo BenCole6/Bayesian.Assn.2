@@ -10,7 +10,8 @@ source("DBDA2E-utilities.R")
 genMCMC = function( data , xName="x" , yName="y" , 
                     numSavedSteps=numSavedSteps , thinSteps=thinSteps , saveName=NULL  ,
                     runjagsMethod=runjagsMethodDefault , 
-                    nChains=4) { 
+                    nChains=4,
+                    Pred1=Pred1, Pred2=Pred2, Pred3=Pred3, Pred4=Pred4, Pred5=Pred5) { 
   require(runjags)
   #-----------------------------------------------------------------------------
   # THE DATA.
@@ -28,7 +29,12 @@ genMCMC = function( data , xName="x" , yName="y" ,
     x = x ,
     y = y ,
     Nx = dim(x)[2] ,
-    Ntotal = dim(x)[1]
+    Ntotal = dim(x)[1],
+    Pred1 = Pred1,
+    Pred2 = Pred2,
+    Pred3 = Pred3,
+    Pred4 = Pred4,
+    Pred5 = Pred5
   )
   #-----------------------------------------------------------------------------
   # THE MODEL.
@@ -37,6 +43,7 @@ genMCMC = function( data , xName="x" , yName="y" ,
   data {
     ym <- mean(y)
     ysd <- sd(y)
+    ymin <- min(y)
     for ( i in 1:Ntotal ) {
       zy[i] <- ( y[i] - ym ) / ysd
     }
@@ -50,29 +57,29 @@ genMCMC = function( data , xName="x" , yName="y" ,
 
     # Specify the priors for original beta parameters
     # Prior locations to reflect the expert information
-    mu0 <- ym # Set to overall mean a priori based on the interpretation of constant term in regression
+    mu0 <- ym # A dwelling with no area, no bedrooms, no bathrooms, no car parks, and is neither property type conceptually does not exist
     mu[1] <- 90 # Area
     mu[2] <- 100000 # Bedrooms
-    mu[3] <- 609360.2 # Bathrooms, muY
+    mu[3] <- ym # Bathrooms, mean of y
     mu[4] <- 120000 # CarParks
-    mu[5] <- 150000 # PropertyType
+    mu[5] <- -150000 # PropertyType
 
     # Prior variances to reflect the expert information    
     Var0   <- (ysd^2)
-    Var[1] <- ((ysd^2)*0.0001) # Area
-    Var[2] <- ((ysd^2)*0.05) # Bedrooms
+    Var[1] <- ((ysd^2)*0.1) # Area
+    Var[2] <- ((ysd^2)*0.75) # Bedrooms
     Var[3] <- ((ysd^2)*5) # Bathrooms
-    Var[4] <- ((ysd^2)*0.001) # CarParks
-    Var[5] <- ((ysd^2)*0.0001) # PropertyType
+    Var[4] <- ((ysd^2)*0.25) # CarParks
+    Var[5] <- ((ysd^2)*0.1) # PropertyType
 
     # Compute corresponding prior means and variances for the standardised parameters
-    muZ[1:Nx] <-  mu[1:Nx] * xsd[1:Nx] / ysd 
+    muZ[1:Nx] <-  mu[1:Nx] * xsd[1:Nx] / ysd^2
 
     muZ0 <- (mu0 + sum( mu[1:Nx] * xm[1:Nx] / xsd[1:Nx] )*ysd - ym) / ysd 
 
     # Compute corresponding prior variances and variances for the standardised parameters
     VarZ[1:Nx] <- Var[1:Nx] * ( xsd[1:Nx]/ ysd )^2
-    VarZ0 <- ((Var0)*100000) / (ysd^2)
+    VarZ0 <- ((Var0)*75000) / (ysd^2)
 
   }
   # Specify the model for standardized data:
@@ -84,7 +91,7 @@ genMCMC = function( data , xName="x" , yName="y" ,
     # Priors vague on standardized scale:
     zbeta0 ~ dnorm( muZ0 , 1/VarZ0 )  
     for ( j in 1:Nx ) {
-      zbeta[j] ~ dnorm( muZ[j] , 0.001/VarZ[j] )
+      zbeta[j] ~ dnorm( muZ[j] , 0.01/VarZ[j] )
     }
     zsigma ~ dgamma(0.001,0.001) #dunif( 1.0E-5 , 1.0E+1 )
     nu ~ dexp(1/30.0)
@@ -95,9 +102,20 @@ genMCMC = function( data , xName="x" , yName="y" ,
     sigma <- zsigma*ysd
 
     # Compute predictions at every step of the MCMC
-    # pred <- beta0 + beta[1] * xPred[1] + beta[2] * xPred[2] + beta[3] * xPred[3] + beta[4] * xPred[4] 
-    #         + beta[5] * xPred[5] + beta[6] * xPred[6] + beta[7] * xPred[7] 
+    Prediction1 <- beta0 + (beta[1] * Pred1[1]) + (beta[2] * Pred1[2]) + (beta[3] * Pred1[3]) + (beta[4] * Pred1[4])
+            + (beta[5] * Pred1[5])
 
+    Prediction2 <- beta0 + (beta[1] * Pred2[1]) + (beta[2] * Pred2[2]) + (beta[3] * Pred2[3]) + (beta[4] * Pred2[4])
+            + (beta[5] * Pred2[5])
+
+    Prediction3 <- beta0 + (beta[1] * Pred3[1]) + (beta[2] * Pred3[2]) + (beta[3] * Pred3[3]) + (beta[4] * Pred3[4])
+            + (beta[5] * Pred3[5])
+
+    Prediction4 <- beta0 + (beta[1] * Pred4[1]) + (beta[2] * Pred4[2]) + (beta[3] * Pred4[3]) + (beta[4] * Pred4[4])
+            + (beta[5] * Pred4[5])
+
+    Prediction5 <- beta0 + (beta[1] * Pred5[1]) + (beta[2] * Pred5[2]) + (beta[3] * Pred5[3]) + (beta[4] * Pred5[4])
+            +( beta[5] * Pred5[5])
   }
   " # close quote for modelString
   # Write out modelString to a text file
@@ -119,8 +137,9 @@ genMCMC = function( data , xName="x" , yName="y" ,
   #-----------------------------------------------------------------------------
   # RUN THE CHAINS
   parameters = c( "beta0" ,  "beta" ,  "sigma", 
-                  "zbeta0" , "zbeta" , "zsigma", "nu")
-  adaptSteps = 1000  # Number of steps to "tune" the samplers
+                  "zbeta0" , "zbeta" , "zsigma", "nu",
+                  "Prediction1", "Prediction2", "Prediction3", "Prediction4", "Prediction5")
+  adaptSteps = 2500  # Number of steps to "tune" the samplers
   burnInSteps = 500
   runJagsOut <- run.jags( method="parallel",
                           model="TEMPmodel.txt" , 
@@ -186,7 +205,11 @@ plotMCMC = function( codaSamples , data , xName="x" , yName="y" ,
   sigma = mcmcMat[,"sigma"]
   nu = mcmcMat[,"nu"]
   log10nu = log10(nu)
-  # pred = mcmcMat[,"pred"] # Added by Demirhan
+  Prediction1 = mcmcMat[,"Prediction1"]
+  Prediction2 = mcmcMat[,"Prediction2"]
+  Prediction3 = mcmcMat[,"Prediction3"]
+  Prediction4 = mcmcMat[,"Prediction4"]
+  Prediction5 = mcmcMat[,"Prediction5"]
   #-----------------------------------------------------------------------------
   # Compute R^2 for credible parameters:
   YcorX = cor( y , x ) # correlation of y with each x predictor
@@ -219,7 +242,7 @@ plotMCMC = function( codaSamples , data , xName="x" , yName="y" ,
   # Marginal histograms:
   
   decideOpenGraph = function( panelCount , saveName , finished=FALSE , 
-                              nRow=2 , nCol=3 ) {
+                              nRow=4 , nCol=4 ) {
     # If finishing a set:
     if ( finished==TRUE ) {
       if ( !is.null(saveName) ) {
@@ -267,8 +290,20 @@ plotMCMC = function( codaSamples , data , xName="x" , yName="y" ,
   histInfo = plotPost( Rsq , cex.lab = 1.75 , showCurve=showCurve ,
                        xlab=bquote(R^2) , main=paste("Prop Var Accntd") )
   panelCount = decideOpenGraph( panelCount , finished=TRUE , saveName=paste0(saveName,"PostMarg") )
-  # histInfo = plotPost( pred , cex.lab = 1.75 , showCurve=showCurve ,
-  #                      xlab=bquote(pred) , main="Prediction" ) # Added by Demirhan
+  histInfo = plotPost( Prediction1 , cex.lab = 1.75 , showCurve=showCurve ,
+                       xlab=bquote(Prediction1) , main="Prediction" )
+  panelCount = decideOpenGraph( panelCount , finished=TRUE , saveName=paste0(saveName,"PostMarg") )
+  histInfo = plotPost( Prediction2 , cex.lab = 1.75 , showCurve=showCurve ,
+                       xlab=bquote(Prediction2) , main="Prediction" )
+  panelCount = decideOpenGraph( panelCount , finished=TRUE , saveName=paste0(saveName,"PostMarg") )
+  histInfo = plotPost( Prediction3 , cex.lab = 1.75 , showCurve=showCurve ,
+                       xlab=bquote(Prediction3) , main="Prediction" )
+  panelCount = decideOpenGraph( panelCount , finished=TRUE , saveName=paste0(saveName,"PostMarg") )
+  histInfo = plotPost( Prediction4 , cex.lab = 1.75 , showCurve=showCurve ,
+                       xlab=bquote(Prediction4) , main="Prediction" )
+  panelCount = decideOpenGraph( panelCount , finished=TRUE , saveName=paste0(saveName,"PostMarg") )
+  histInfo = plotPost( Prediction5 , cex.lab = 1.75 , showCurve=showCurve ,
+                       xlab=bquote(Prediction5) , main="Prediction" )
   # Standardized scale:
   panelCount = 1
   panelCount = decideOpenGraph( panelCount , saveName=paste0(saveName,"PostMargZ") )
